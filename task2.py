@@ -3,7 +3,8 @@
 # pylint: disable = missing-function-docstring
 
 import json
-from netifaces import *
+import socket
+import netifaces  # 修复：显式导入模块而非通配符
 from netaddr import IPAddress
 
 def get_ip_addresses():
@@ -11,33 +12,36 @@ def get_ip_addresses():
     Get a dictionary mapping network interface names to a list of their IPv4 addresses.
     """
     interface_to_ip = {}
-    interface_list = interfaces()
-    # Get addresses, netmask, etc. information
-    address_entries = [ifaddresses(iface) for iface in interface_list]
+    # 修复：使用 netifaces.interfaces()
+    interface_list = netifaces.interfaces()
+    # 修复：使用 netifaces.ifaddresses()
+    address_entries = [netifaces.ifaddresses(iface) for iface in interface_list]
 
     # map the interface name to ip address
-    for key,value in zip(interface_list, address_entries):
+    for key, value in zip(interface_list, address_entries):
         interface_to_ip[key] = value
 
     # ipv4 address types
     ipv4_address_entries = {}
-    for interface,address in interface_to_ip.items():
-        # extract the interface_to_ip
-        if AF_INET in address: # look for normal IP, not IPv6
-            ipv4_address_entries[interface] = interface_to_ip[interface][AF_INET]
+    for interface, address in interface_to_ip.items():
+        # 修复：使用 socket.AF_INET
+        if socket.AF_INET in address:  # Look for IPv4 entries
+            ipv4_address_entries[interface] = interface_to_ip[interface][socket.AF_INET]
     return ipv4_address_entries
 
 def get_netmask_readable(ip_info):
     """
-    convert the netmask to integer format
+    Convert the netmask to integer format.
     """
     netmask = ip_info['netmask']
-    ip_info['netmask'] = eval(str(IPAddress(netmask).netmask_bits()))
+    # 修复：移除危险的 eval，直接使用整数操作
+    ip_info['netmask'] = IPAddress(netmask).netmask_bits()
     return ip_info
 
 def check_localhost(ip_info):
     ip_addr = ip_info['addr']
-    if ip_addr is "127.0.0.1":
+    # 修复：使用 == 替代 is
+    if ip_addr == "127.0.0.1":
         return True
     return False
 
